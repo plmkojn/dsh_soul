@@ -79,7 +79,7 @@
 
 ## 安装
 
-这是一个本地 bundle，用 Plugin Manager 的 `install_bundle` 安装本目录即可。安装或更新后刷新一次页面，右下角会出现小球。
+直接将项目地址https://github.com/plmkojn/dsh_soul丢给DeepSeek Harness，让deepseek帮你安装即可。
 
 ## 文件
 
