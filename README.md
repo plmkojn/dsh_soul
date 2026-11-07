@@ -28,16 +28,15 @@ Requirements:
 From a checkout:
 
 ```powershell
-git clone https://github.com/<your-name>/dsh-soul.git
+git clone https://github.com/plmkojn/dsh_soul.git
 ```
 
 1. Open DeepSeek Harness → **Plugin Manager**.
-2. Choose **Install bundle** and select the cloned `dsh-soul` directory.
+2. Choose **Install bundle** and select the cloned `dsh_soul` directory.
 3. Refresh the Web page.
 
 The companion ball appears at the bottom-right. Click it to open the panel.
 
-> Replace `<your-name>` in the URL with the GitHub account that owns the repository after you create it.
 
 ## Data and privacy
 
