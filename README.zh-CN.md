@@ -79,7 +79,7 @@
 
 ## 安装
 
-直接将项目地址https://github.com/plmkojn/dsh_soul丢给DeepSeek Harness，让deepseek帮你安装即可。
+直接将项目地址https://github.com/plmkojn/dsh_soul 丢给DeepSeek Harness，让deepseek帮你安装即可。
 
 ## 文件
 
