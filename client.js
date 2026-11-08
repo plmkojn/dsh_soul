@@ -373,8 +373,9 @@ window.__ModuleLoader__.load({
     }
 
     function orbColors(state) {
-      const mood = clamp(Number.isFinite(Number(state && state.moodScore)) ? Number(state.moodScore) : 50, 0, 100)
-      const energy = clamp(Number.isFinite(Number(state && state.energy)) ? Number(state.energy) : 90, 0, 90)
+      const s = state || {}
+      const mood = clamp(Number.isFinite(Number(s.moodScore)) ? Number(s.moodScore) : 50, 0, 100)
+      const energy = clamp(Number.isFinite(Number(s.energy)) ? Number(s.energy) : 90, 0, 90)
       const hue = 205 + mood * 1.22
       const sat = 52 + energy * 0.38
       return {
@@ -387,9 +388,10 @@ window.__ModuleLoader__.load({
     function Orb({ state, size = 40, live = false }) {
       const idRef = React.useRef('')
       if (!idRef.current) idRef.current = 'soul-grad-' + Math.random().toString(36).slice(2, 9)
-      const colors = orbColors(state)
-      const mood = clamp(Number.isFinite(Number(state && state.moodScore)) ? Number(state.moodScore) : 50, 0, 100)
-      const energy = clamp(Number.isFinite(Number(state && state.energy)) ? Number(state.energy) : 90, 0, 90)
+      const s = state || {}
+      const colors = orbColors(s)
+      const mood = clamp(Number.isFinite(Number(s.moodScore)) ? Number(s.moodScore) : 50, 0, 100)
+      const energy = clamp(Number.isFinite(Number(s.energy)) ? Number(s.energy) : 90, 0, 90)
       const moodT = mood / 100
       const mouthControl = 35 + moodT * 9
       const mouth = `M25 39 Q32 ${mouthControl.toFixed(1)} 39 39`
