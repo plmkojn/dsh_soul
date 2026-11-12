@@ -12,6 +12,11 @@ window.__ModuleLoader__.load({
       subtitle: '一条住在 Harness 里的鱼',
       mood: '心情',
       energy: '精力',
+      energySleeping: '睡觉中',
+      energyExhausted: '很困',
+      energyTired: '有点累',
+      energyOkay: '还行',
+      energyEnergetic: '精神',
       affection: '好感度',
       affectionDistant: '有点疏远',
       affectionWary: '还在观察',
@@ -54,6 +59,8 @@ window.__ModuleLoader__.load({
       entries: '篇',
       autonomy: '自主活动',
       autonomyHint: '你不在的时候，也让TA有自己的生活。',
+      desktopPet: '桌宠窗口',
+      desktopPetHint: '把 TA 放到桌面上：单独置顶的小窗口，不跟着 DSH 窗口走。',
       interval: '独处间隔',
       minutes: '分钟',
       hours: '小时',
@@ -123,6 +130,11 @@ window.__ModuleLoader__.load({
       subtitle: 'A fish who lives inside Harness',
       mood: 'Mood',
       energy: 'Energy',
+      energySleeping: 'Sleeping',
+      energyExhausted: 'Exhausted',
+      energyTired: 'Tired',
+      energyOkay: 'Okay',
+      energyEnergetic: 'Energetic',
       affection: 'Bond',
       affectionDistant: 'A little distant',
       affectionWary: 'Still watching',
@@ -165,6 +177,8 @@ window.__ModuleLoader__.load({
       entries: 'entries',
       autonomy: 'Autonomous moments',
       autonomyHint: 'Let TA have a life when you are not around.',
+      desktopPet: 'Desktop pet',
+      desktopPetHint: 'Float TA on the desktop in its own always-on-top window, independent of DSH.',
       interval: 'Interval',
       minutes: 'min',
       hours: 'h',
@@ -234,7 +248,7 @@ window.__ModuleLoader__.load({
 .soul-orb-button:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:4px;}
 .soul-orb-wrap{position:relative;display:grid;place-items:center;animation:soul-float 5.5s ease-in-out infinite;}
 .soul-orb-button .soul-unread{position:absolute;top:-2px;right:-2px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--dsw-alias-brand-primary);color:var(--dsw-alias-bg-base);font-size:10px;font-weight:700;display:grid;place-items:center;border:2px solid var(--dsw-alias-bg-overlay);}
-.soul-panel{position:absolute;right:20px;bottom:20px;width:404px;height:min(700px,calc(100vh - 40px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;border:1px solid var(--dsw-alias-border-l1);border-radius:22px;background:var(--dsw-alias-bg-overlay);box-shadow:0 28px 90px rgba(0,0,0,.32),0 2px 8px rgba(0,0,0,.14);backdrop-filter:blur(18px);}
+.soul-panel{position:absolute;right:20px;bottom:20px;width:440px;height:min(700px,calc(100vh - 40px));max-height:calc(100vh - 40px);display:flex;flex-direction:column;overflow:hidden;pointer-events:auto;border:1px solid var(--dsw-alias-border-l1);border-radius:22px;background:var(--dsw-alias-bg-overlay);box-shadow:0 28px 90px rgba(0,0,0,.32),0 2px 8px rgba(0,0,0,.14);backdrop-filter:blur(18px);}
 .soul-panel:focus{outline:none;}
 .soul-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px 12px 16px;border-bottom:1px solid var(--dsw-alias-border-l1);background:linear-gradient(180deg,color-mix(in srgb,var(--dsw-alias-bg-layer-1) 72%,transparent),transparent);}
 .soul-header-id{display:flex;align-items:center;gap:10px;min-width:0;}
@@ -249,15 +263,15 @@ window.__ModuleLoader__.load({
 .soul-scroll{overflow-y:auto;min-height:0;flex:1;scrollbar-width:thin;scrollbar-color:var(--dsw-alias-border-l2) transparent;}
 .soul-scroll::-webkit-scrollbar{width:8px;}
 .soul-scroll::-webkit-scrollbar-thumb{background:var(--dsw-alias-border-l2);border-radius:8px;border:2px solid transparent;background-clip:content-box;}
-.soul-vitals{padding:14px 16px 0;}
-.soul-vital{display:flex;align-items:center;gap:10px;margin-bottom:9px;}
-.soul-vital-label{width:38px;flex:none;font-size:11px;color:var(--dsw-alias-label-secondary);}
-.soul-vital-value{min-width:64px;max-width:132px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;}
-.soul-vital-bar{flex:1;height:6px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);overflow:hidden;}
+.soul-vitals{padding:14px 18px 0;}
+.soul-vital{display:flex;align-items:center;gap:8px;margin-bottom:9px;min-width:0;}
+.soul-vital-label{width:36px;flex:none;font-size:11px;color:var(--dsw-alias-label-secondary);}
+.soul-vital-value{min-width:56px;max-width:120px;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;}
+.soul-vital-bar{flex:1 1 60px;min-width:48px;height:6px;border-radius:999px;background:var(--dsw-alias-bg-layer-2);overflow:hidden;}
 .soul-vital-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--soul-a),var(--soul-b));transition:width .5s ease;}
 .soul-vital-fill.energy{background:linear-gradient(90deg,var(--dsw-alias-state-success-primary),color-mix(in srgb,var(--dsw-alias-state-success-primary) 55%,var(--soul-a)));}
 .soul-vital-fill.affection{background:linear-gradient(90deg,#ff9fc2,#ff4d78);}
-.soul-vital-num{width:34px;flex:none;text-align:right;font-size:10px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;}
+.soul-vital-num{width:48px;flex:0 0 48px;text-align:right;font-size:11px;color:var(--dsw-alias-label-secondary);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:visible;}
 .soul-thought{margin:3px 16px 0;padding:9px 12px;border-left:2px solid var(--soul-a);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--soul-a) 7%,transparent);font-size:12px;line-height:1.6;color:var(--dsw-alias-label-primary);}
 .soul-thought:before{content:'“';color:var(--soul-a);font-weight:700;margin-right:1px;}
 .soul-thought:after{content:'”';color:var(--soul-a);font-weight:700;margin-left:1px;}
@@ -527,6 +541,20 @@ window.__ModuleLoader__.load({
       return t('affectionDistant')
     }
 
+    function energyLabel(state, t) {
+      const energy = clamp(Number(state.energy) || 0, 0, 90)
+      if (state.status === 'sleeping' || energy < 12) return t('energySleeping')
+      if (energy < 25) return t('energyExhausted')
+      if (energy < 50) return t('energyTired')
+      if (energy < 75) return t('energyOkay')
+      return t('energyEnergetic')
+    }
+
+    function format1(value) {
+      const number = Number(value)
+      return Number.isFinite(number) ? number.toFixed(1) : '0.0'
+    }
+
     function periodText(clock, t) {
       const key = (clock && clock.periodKey) || 'evening'
       return t('period' + key.charAt(0).toUpperCase() + key.slice(1))
@@ -655,19 +683,19 @@ window.__ModuleLoader__.load({
             h('span', { className: 'soul-vital-label' }, t('mood')),
             h('span', { className: 'soul-vital-value' }, state.mood || '—'),
             h('div', { className: 'soul-vital-bar' }, h('div', { className: 'soul-vital-fill', style: { width: `${mood}%` } })),
-            h('span', { className: 'soul-vital-num' }, `${Math.round(mood)}`)
+            h('span', { className: 'soul-vital-num' }, format1(mood))
           ),
           h('div', { className: 'soul-vital' },
             h('span', { className: 'soul-vital-label' }, t('energy')),
-            h('span', { className: 'soul-vital-value' }, `${Math.round(energy * 10) / 10}`),
+            h('span', { className: 'soul-vital-value' }, energyLabel(state, t)),
             h('div', { className: 'soul-vital-bar' }, h('div', { className: 'soul-vital-fill energy', style: { width: `${energy}%` } })),
-            h('span', { className: 'soul-vital-num' }, `${Math.round(energy)}`)
+            h('span', { className: 'soul-vital-num' }, format1(energy))
           ),
           h('div', { className: 'soul-vital' },
             h('span', { className: 'soul-vital-label' }, t('affection')),
             h('span', { className: 'soul-vital-value' }, affectionLabel(affection, t)),
             h('div', { className: 'soul-vital-bar' }, h('div', { className: 'soul-vital-fill affection', style: { width: `${affection}%` } })),
-            h('span', { className: 'soul-vital-num' }, `${Math.round(affection * 10) / 10}`)
+            h('span', { className: 'soul-vital-num' }, format1(affection))
           )
         ),
         state.thought ? h('div', { className: 'soul-thought' }, state.thought) : null
@@ -911,6 +939,17 @@ window.__ModuleLoader__.load({
               checked: config.nightRest !== false,
               label: t('nightRest'),
               onChange: (value) => void saveConfig({ nightRest: value }),
+            })
+          ),
+          h('div', { className: 'soul-setting' },
+            h('div', { className: 'soul-setting-copy' },
+              h('div', { className: 'soul-setting-title' }, t('desktopPet')),
+              h('div', { className: 'soul-setting-hint' }, t('desktopPetHint'))
+            ),
+            h(Switch, {
+              checked: config.petWindow !== false,
+              label: t('desktopPet'),
+              onChange: (value) => void saveConfig({ petWindow: value }),
             })
           ),
           h('div', { className: 'soul-setting' },
@@ -1161,11 +1200,12 @@ window.__ModuleLoader__.load({
       }
 
       const ready = Boolean(data && data.ready)
+      const petLive = Boolean(data && data.pet && data.pet.running)
       return h(React.Fragment, null,
         h('style', { key: 'soul-style' }, CSS),
         h('div', { className: 'soul-layer', style: { '--soul-a': orbColors(state).a, '--soul-b': orbColors(state).b } },
           !open
-            ? h('button', {
+            ? (petLive ? null : h('button', {
                 type: 'button',
                 className: 'soul-orb-button',
                 'aria-label': `${t('open')} ${state.name}`,
@@ -1174,7 +1214,7 @@ window.__ModuleLoader__.load({
               },
                 h(Orb, { state, size: 64, live: ready && data.running }),
                 unread > 0 ? h('span', { className: 'soul-unread' }, unread > 9 ? '9+' : unread) : null
-              )
+              ))
             : h('section', {
                 className: 'soul-panel',
                 role: 'dialog',

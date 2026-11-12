@@ -18,6 +18,8 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
+    "pet/pet-window.ps1",
+    "DEPLOY.md",
     "README.md",
     "README.zh-CN.md",
     "LICENSE",

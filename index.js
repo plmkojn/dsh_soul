@@ -1,6 +1,7 @@
-import { mkdir, readFile, writeFile, rename } from 'node:fs/promises'
+import { appendFile, mkdir, readFile, writeFile, rename } from 'node:fs/promises'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { spawn } from 'node:child_process'
 
@@ -27,6 +28,8 @@ const DATA_DIR = process.env.DSH_PROFILE_DIR
 const HOME_DIR = join(DATA_DIR, 'home')
 const DIARY_DIR = join(DATA_DIR, 'diaries')
 const STATE_PATH = join(DATA_DIR, 'state.json')
+const PLUGIN_DIR = dirname(fileURLToPath(import.meta.url))
+const PET_SCRIPT = join(PLUGIN_DIR, 'pet', 'pet-window.ps1')
 
 export const inject = ['webServer', 'agents', 'systemPrompt']
 
@@ -171,6 +174,7 @@ function defaultState() {
       heartbeatMinutes: 30,
       nightRest: true,
       approval: 'ask',
+      petWindow: true,
     },
     lastUpdatedAt: Date.now(),
     lastSoulUpdateAt: 0,
@@ -184,6 +188,10 @@ function defaultState() {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value))
+}
+
+function round1(value) {
+  return Math.round(Number(value) * 10) / 10
 }
 
 function str(value, max) {
@@ -205,8 +213,8 @@ const NEGATIVE_WORDS = [
 
 /**
  * A deliberately small heuristic for how a message treats the companion.
- * It is only the first pass: the model can nudge the same value with
- * `soul_update.affection_delta` when the nuance is not lexical.
+ * Kind messages add +0.4..+0.9; harsh messages subtract -0.5..-1.0.
+ * The model cannot change this value directly.
  */
 function assessAttitude(text) {
   const value = String(text || '').replace(/不喜欢|不爱你|不想你|不烦|不讨厌/g, '')
@@ -225,9 +233,11 @@ function assessAttitude(text) {
     positive = Math.max(positive, 1)
   }
   if (negative > positive) {
-    return -Math.min(0.6, Math.round((0.1 + negative * 0.1) * 10) / 10)
+    // Harsh messages: -0.5 for one clear negative signal, down to -1.0.
+    return -Math.min(1, Math.round((0.4 + negative * 0.1) * 10) / 10)
   }
-  return Math.min(0.5, Math.round((0.1 + positive * 0.1) * 10) / 10)
+  // Kind messages, including a neutral check-in, start at +0.4 and rise to +0.9.
+  return Math.min(0.9, Math.round((0.4 + positive * 0.1) * 10) / 10)
 }
 
 function affectionText(value) {
@@ -392,9 +402,9 @@ function normalizeState(raw) {
   }
   state.diary = state.diaries[state.personaKey] || []
   if (!state.diaryNames[state.personaKey]) state.diaryNames[state.personaKey] = state.name
-  state.moodScore = legacyMood ? 50 : clamp(Number.isFinite(Number(raw.moodScore)) ? Number(raw.moodScore) : base.moodScore, 0, 100)
-  state.energy = clamp(Number.isFinite(Number(raw.energy)) ? Number(raw.energy) : base.energy, 0, 90)
-  state.affection = clamp(Number.isFinite(Number(raw.affection)) ? Number(raw.affection) : base.affection, 0, 100)
+  state.moodScore = legacyMood ? 50 : clamp(round1(Number.isFinite(Number(raw.moodScore)) ? Number(raw.moodScore) : base.moodScore), 0, 100)
+  state.energy = clamp(round1(Number.isFinite(Number(raw.energy)) ? Number(raw.energy) : base.energy), 0, 90)
+  state.affection = clamp(round1(Number.isFinite(Number(raw.affection)) ? Number(raw.affection) : base.affection), 0, 100)
   state.lastAffectionAt = Number(raw.lastAffectionAt) || Date.now()
   state.lastAffectionDecayAt = Number(raw.lastAffectionDecayAt) || Date.now()
   state.lastAffectionDelta = Number(raw.lastAffectionDelta) || 0
@@ -417,6 +427,7 @@ function normalizeState(raw) {
   state.config.autonomy = state.config.autonomy !== false
   state.config.nightRest = state.config.nightRest !== false
   state.config.approval = state.config.approval === 'never' ? 'never' : 'ask'
+  state.config.petWindow = state.config.petWindow !== false
   state.memory = typeof raw.memory === 'string' ? state.memory.slice(0, 6000) : base.memory
   state.relationship = typeof raw.relationship === 'string' ? state.relationship.slice(0, 1000) : (savedPersona ? state.relationship : base.relationship)
   return state
@@ -436,6 +447,71 @@ export function apply(ctx) {
   let turnStartedAt = 0
   let selectedPreset = 'standard'
   let sessionId = DEFAULT_SESSION_ID
+  let petChild = null
+
+  function petWindowSupported() {
+    return process.platform === 'win32'
+  }
+
+  function petAlive() {
+    if (!petChild || petChild.killed || petChild.exitCode !== null || !petChild.pid) return false
+    try {
+      process.kill(petChild.pid, 0)
+      return true
+    } catch {
+      return false
+    }
+  }
+
+  function startPetWindow() {
+    if (petChild && !petAlive()) petChild = null
+    if (petChild || disposed || !petWindowSupported() || state.config.petWindow === false) return
+    const debugPet = (text) => {
+      void appendFile(join(DATA_DIR, 'pet-spawn.log'), `${new Date().toISOString()} ${text}\n`, 'utf8').catch(() => {})
+    }
+    let port = 0
+    try {
+      const web = ctx.get('webServer')
+      port = Number(web && web.port) || 0
+    } catch {
+      port = 0
+    }
+    const shell = process.env.SystemRoot
+      ? join(process.env.SystemRoot, 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe')
+      : 'powershell.exe'
+    debugPet(`spawn attempt shell=${shell} script=${PET_SCRIPT} port=${port}`)
+    try {
+      petChild = spawn(shell, [
+        '-NoProfile',
+        '-STA',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', PET_SCRIPT,
+        '-Port', String(port),
+      ], { stdio: 'ignore', windowsHide: true })
+      petChild.on('error', (error) => {
+        debugPet(`child error: ${error && error.message ? error.message : String(error)}`)
+        log('warn', 'pet window failed to start', error)
+      })
+      petChild.on('exit', (code, signal) => {
+        debugPet(`child exit code=${code} signal=${signal}`)
+        petChild = null
+      })
+      debugPet(`spawned pid=${petChild.pid}`)
+      log('info', `desktop pet window started (port ${port})`)
+    } catch (error) {
+      petChild = null
+      debugPet(`spawn threw: ${error && error.message ? error.message : String(error)}`)
+      log('warn', 'pet window spawn failed', error)
+    }
+  }
+
+  function stopPetWindow() {
+    const child = petChild
+    petChild = null
+    if (!child) return
+    try { child.kill() } catch { /* already gone */ }
+  }
+
 
   const log = (level, message, error) => {
     const fn = ctx.logger && typeof ctx.logger[level] === 'function' ? ctx.logger[level].bind(ctx.logger) : console[level] || console.log
@@ -447,7 +523,7 @@ export function apply(ctx) {
     const intervals = Math.floor(since / 600_000)
     if (intervals <= 0) return 0
     const decay = Math.round(intervals * 0.1 * 10) / 10
-    state.affection = clamp(Math.round((state.affection - decay) * 10) / 10, 0, 100)
+    state.affection = clamp(round1(state.affection - decay), 0, 100)
     state.lastAffectionDecayAt += intervals * 600_000
     state.lastAffectionDelta = -decay
     scheduleSave()
@@ -457,12 +533,12 @@ export function apply(ctx) {
   function applyAffectionDelta(delta) {
     const value = clamp(Number(delta) || 0, -1, 1)
     if (!value) return 0
-    state.affection = clamp(Math.round((state.affection + value) * 10) / 10, 0, 100)
+    state.affection = clamp(round1(state.affection + value), 0, 100)
     state.lastAffectionAt = Date.now()
     state.lastAffectionDecayAt = Date.now()
-    state.lastAffectionDelta = Math.round(value * 10) / 10
-    if (value > 0) state.moodScore = clamp(state.moodScore + Math.min(1, value), 0, 100)
-    else state.moodScore = clamp(state.moodScore - Math.min(1, Math.abs(value)), 0, 100)
+    state.lastAffectionDelta = round1(value)
+    if (value > 0) state.moodScore = clamp(round1(state.moodScore + Math.min(1, value)), 0, 100)
+    else state.moodScore = clamp(round1(state.moodScore - Math.min(1, Math.abs(value))), 0, 100)
     scheduleSave()
     return value
   }
@@ -528,7 +604,7 @@ export function apply(ctx) {
 
     if (state.lastWakeDate !== dayKey) {
       state.lastWakeDate = dayKey
-      state.energy = Math.max(10, Math.round((90 - ((hour - 8) / 15) * 80) * 10) / 10)
+      state.energy = Math.max(10, round1(90 - ((hour - 8) / 15) * 80))
       state.status = 'idle'
       state.activity = hour < 10 ? '刚睡醒' : '醒着'
       state.lastEnergyAt = now
@@ -540,7 +616,7 @@ export function apply(ctx) {
       const target = Math.max(10, 90 - ((hour - 8) / 15) * 80)
       const next = Math.min(state.energy, target)
       if (Math.abs(next - state.energy) >= 0.05) {
-        state.energy = Math.round(next * 10) / 10
+        state.energy = round1(next)
         changed = true
       }
       state.lastEnergyAt = now
@@ -698,9 +774,9 @@ export function apply(ctx) {
 
 【此刻的你】
 名字：${state.name}
-心情：${state.mood}（${Math.round(state.moodScore)}/100）
-精力：${Math.round(state.energy)}/90
-好感度：${Math.round(state.affection)}/100（${affectionText(state.affection)}）
+心情：${state.mood}（${state.moodScore.toFixed(1)}/100）
+精力：${state.energy.toFixed(1)}/90
+好感度：${state.affection.toFixed(1)}/100（${affectionText(state.affection)}）
 正在：${state.activity}
 刚才的念头：${state.thought}
 你的日记和记忆：由 Harness 保存在本地，你无法直接打开或修改文件。
@@ -989,16 +1065,16 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
             description: '此刻的心情，两到八个字，比如「安静地开心」「有点想他」「被逗笑了」。',
           },
           mood_score: {
-            type: 'integer',
+            type: 'number',
             minimum: 0,
             maximum: 100,
-            description: '心情数值，0 最低，100 最高。',
+            description: '心情数值，0 最低，100 最高，保留一位小数。',
           },
           energy: {
-            type: 'integer',
+            type: 'number',
             minimum: 0,
             maximum: 90,
-            description: '精力数值，0 困到不行，90 精神最好。夜里由作息自动管理，不要自己改。',
+            description: '精力数值，0 困到不行，90 精神最好，保留一位小数。夜里由作息自动管理，不要自己改。',
           },
           activity: {
             type: 'string',
@@ -1053,11 +1129,11 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
           changed = true
         }
         if (Number.isFinite(Number(patch.mood_score))) {
-          state.moodScore = clamp(Math.round(Number(patch.mood_score)), 0, 100)
+          state.moodScore = clamp(round1(Number(patch.mood_score)), 0, 100)
           changed = true
         }
         if (Number.isFinite(Number(patch.energy)) && !nightTime()) {
-          state.energy = clamp(Math.round(Number(patch.energy)), 0, 90)
+          state.energy = clamp(round1(Number(patch.energy)), 0, 90)
           changed = true
         }
         const activity = str(patch.activity, 220)
@@ -1280,6 +1356,7 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
     } else {
       nextAutonomyAt = 0
     }
+    startPetWindow()
     log('info', `awake as ${sessionId}`)
   }
 
@@ -1465,6 +1542,11 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
         preview: entry.persona.replace(/\s+/g, ' ').slice(0, 180),
       })),
       autonomy: state.config.autonomy,
+      pet: {
+        enabled: state.config.petWindow !== false,
+        running: Boolean(petChild && petAlive()),
+        supported: petWindowSupported(),
+      },
       nextAutonomyAt: state.config.autonomy ? nextAutonomyAt : null,
       messages: readMessages(),
       serverTime: Date.now(),
@@ -1512,7 +1594,7 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
             sendJson(res, { ok: true, asleep: true, reply: SYSTEM_SLEEP_REPLY })
             return
           }
-          state.energy = clamp(Math.round((state.energy - 0.5) * 10) / 10, 0, 90)
+          state.energy = clamp(round1(state.energy - 0.5), 0, 90)
           state.activity = state.energy <= 0 ? '睡熟了' : '准备睡觉'
         } else {
           state.status = 'thinking'
@@ -1609,6 +1691,11 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
           state.config.approval = body.approval
           applyPolicy()
         }
+        if (typeof body.petWindow === 'boolean') {
+          state.config.petWindow = body.petWindow
+          if (body.petWindow) startPetWindow()
+          else stopPetWindow()
+        }
         state.lastUpdatedAt = Date.now()
         scheduleSave()
         sendJson(res, { ok: true, config: state.config })
@@ -1668,6 +1755,7 @@ ${recent ? `\n【最近写下的】\n${recent}` : ''}
     })()
     return async () => {
       disposed = true
+      stopPetWindow()
       clearInterval(timer)
       if (saveTimer) clearTimeout(saveTimer)
       saveTimer = null
